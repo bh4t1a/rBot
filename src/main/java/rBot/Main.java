@@ -28,7 +28,7 @@ public class Main {
 		try {
 			bot = JDABuilder.createDefault(token)
 					.enableIntents(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_VOICE_STATES)
-					.addEventListeners(new GaeListener(), new MusicCommandListener())
+					.addEventListeners(new MusicCommandListener())
 					.setActivity(Activity.watching("gaE PoRN"))
 					.setMemberCachePolicy(MemberCachePolicy.VOICE)
 					.build()

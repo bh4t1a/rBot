@@ -1,5 +1,7 @@
 package rBot;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -39,15 +41,17 @@ public class LavaPlayerTrackScheduler extends AudioEventAdapter {
 		}
 	}
 	
-	public String getStringQueue() {
+	public boolean isQueueEmpty() {
+		return queue.isEmpty();
+	}
+	
+	public String getQueueAsString() {
 		String strQueue = Main.EMPTY_STRING;
 		int index = 1;
-		strQueue = "NOW PLAYING" + player.getPlayingTrack().getInfo().title+"\n\n";
 		for(AudioTrack track : queue) {
-			strQueue = strQueue+"\n "+index+" "+track.getInfo().title;
+			strQueue = strQueue + "\n" + index + ". " + track.getInfo().title;
+			index++;
 		}
 		return strQueue;
 	}
-
-
 }

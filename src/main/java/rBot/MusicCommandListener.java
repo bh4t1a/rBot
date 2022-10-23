@@ -4,12 +4,17 @@ import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.playback.NonAllocatingAudioFrameBuffer;
+
+import java.util.List;
+import java.util.regex.Matcher;
 
 import org.apache.commons.lang3.StringUtils;
 
 import net.dv8tion.jda.api.audio.AudioSendHandler;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.SelfUser;
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
@@ -19,6 +24,7 @@ import net.dv8tion.jda.api.managers.AudioManager;
 public class MusicCommandListener extends ListenerAdapter {
 	
 	public static final String YT_REGEX = "((?:https?:)?\\/\\/)?((?:www|m)\\.)?((?:youtube(-nocookie)?\\.com|youtu.be))(\\/(?:[\\w\\-]+\\?v=|embed\\/|v\\/)?)([\\w\\-]+)(\\S+)?";
+	public static final String URLRegex = "[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&\\/=]*)";
 	
 	public static final String PLAY_PREFIX = "g!play";
 	public static final String VIEW_QUEUE = "viewqueue";
@@ -58,23 +64,42 @@ public class MusicCommandListener extends ListenerAdapter {
 			stopPlaying(event);
 		if(event.getMessage().getContentRaw().toLowerCase().startsWith(LEAVE_CHANNEL))
 			leaveChannel(event);
+		//implement pause and next
 		
 	}
 	
 	public void leaveChannel(MessageReceivedEvent event) {
 		stopPlaying(event);
-	
+		AudioManager audioManager = event.getGuild().getAudioManager();
+		audioManager.closeAudioConnection();
 	}
 	
 	public void stopPlaying(MessageReceivedEvent event) {
+		if(!isPlaying())
+			return;
 		player.stopTrack();
 	}
 	
+	public boolean isPlaying() {
+		if(player.getPlayingTrack()==null) {
+			System.out.println("NO TRACK PLAYING ");
+			return false;
+		}
+		return true;
+	}
+	
 	public void viewQueue(MessageReceivedEvent event) {
-		String queue = trackScheduler.getStringQueue();
-		if(StringUtils.isBlank(queue))
-			queue = "EMPTY";
-		event.getChannel().sendMessage("In queue : "+"\n```"+queue+"\n```").queue();
+		if(!isPlaying())
+			return;
+		else {
+			if(trackScheduler.isQueueEmpty()) {
+				event.getChannel().sendMessageEmbeds(EmbedBuilders.buildMetaData(player.getPlayingTrack(), "Now playing..")).queue();
+				return;
+			}
+			
+		}
+		String songList = trackScheduler.getQueueAsString();
+		event.getChannel().sendMessageEmbeds(EmbedBuilders.build_viewQueueMetaData(player.getPlayingTrack(), songList)).queue();
 	}
 	
 	public void playCommand(MessageReceivedEvent event) {
@@ -82,7 +107,7 @@ public class MusicCommandListener extends ListenerAdapter {
 		Member authorAsMember = event.getMember();
 		AudioChannel authorVoiceChannel;
 		String messageContent = event.getMessage().getContentRaw();
-		String trackUrl = RegexEngine.getContentData(YT_REGEX, messageContent);
+		String trackUrl = getUrl(messageContent);
 		
 		if(StringUtils.isBlank(trackUrl)) {
 			System.out.println("EMPTY TRACK URL");
@@ -106,6 +131,27 @@ public class MusicCommandListener extends ListenerAdapter {
 		audioManager.openAudioConnection(channel);
 		LoadResultHandlerClass audioLoadResultHandler = new LoadResultHandlerClass(event, trackScheduler);
 		playerManager.loadItem(URL, audioLoadResultHandler);
+	}
+	
+	public static boolean isUrl(String URL) {
+		Matcher matches = RegexEngine.getMatches(URLRegex, URL);
+		if(matches.find()) {
+			return true;
+		}
+		return false;
+	}
+	
+	public static String getUrl(String messageContent) {
+		String identifier = Main.EMPTY_STRING;
+		if(isUrl(messageContent)) {
+			if(RegexEngine.getMatches(YT_REGEX, messageContent).find()) {
+				identifier = RegexEngine.getContentData(YT_REGEX, messageContent);
+			}
+		}else {
+			String searchTerm = RegexEngine.getGroupData("^(?:g!play)(.*)", messageContent, 1);
+			identifier = "ytsearch:" + searchTerm;
+		}
+		return identifier;
 	}
 	
 

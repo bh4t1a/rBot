@@ -1,5 +1,7 @@
 package rBot;
 
+import java.util.List;
+
 import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
@@ -13,32 +15,29 @@ public class LoadResultHandlerClass implements AudioLoadResultHandler {
 	
 	private MessageReceivedEvent event;
 	private LavaPlayerTrackScheduler trackSchedulerInstance;
-	private static final String thumbUrl = "https://img.youtube.com/vi/";
 	
 	LoadResultHandlerClass(MessageReceivedEvent event, LavaPlayerTrackScheduler trackSchedulerInstance){
 		this.event=event;
 		this.trackSchedulerInstance = trackSchedulerInstance;	
 	}
-	
-	public static MessageEmbed buildMetaData(AudioTrack track) {
-		EmbedBuilder embed = new EmbedBuilder();
-		embed.setTitle(track.getInfo().title);
-		embed.addField("Uploader", track.getInfo().author, false);
-		embed.setThumbnail(thumbUrl+track.getInfo().identifier+"/0.jpg");
-		embed.setFooter("Added to queue!");
-		
-		return embed.build();
-	}
 
 	@Override
 	public void trackLoaded(AudioTrack track) {
+		event.getChannel().sendMessageEmbeds(EmbedBuilders.buildMetaData(track, "Adding to queue!")).queue();
 		trackSchedulerInstance.addToQueue(track);
-		event.getChannel().sendMessageEmbeds(buildMetaData(track)).queue();
 	}
 
 	@Override
 	public void playlistLoaded(AudioPlaylist playlist) {
-		// TODO Auto-generated method stub
+		List<AudioTrack> tracks = playlist.getTracks();
+		// for loading all the matches
+//		for(AudioTrack track : tracks) {
+//			event.getChannel().sendMessageEmbeds(EmbedBuilders.buildMetaData(track, "Adding to queue!")).queue();
+//			trackSchedulerInstance.addToQueue(track);
+//		}
+		// load only first result
+		event.getChannel().sendMessageEmbeds(EmbedBuilders.buildMetaData(tracks.get(0), "Adding to queue!")).queue();
+		trackSchedulerInstance.addToQueue(tracks.get(0));
 		
 	}
 
